@@ -1,0 +1,16 @@
+#!/bin/sh
+
+set -e
+
+umask 077
+
+basedir=~/.DavorCoin
+dbfile="$basedir/DB_CONFIG"
+cfgfile="$basedir/DavorCoin.conf"
+
+[ -e "$basedir" ] || mkdir "$basedir"
+
+# DavorCoin does not clean up DB log files by default
+[ -e "$dbfile" ] || echo 'set_flags DB_LOG_AUTOREMOVE' > "$dbfile"
+
+exec /usr/lib/DavorCoin/DavorCoin-qt "$@"

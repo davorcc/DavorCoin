@@ -1,0 +1,2 @@
+debian/bin/DavorCoind usr/bin
+src/DavorCoind usr/lib/DavorCoin

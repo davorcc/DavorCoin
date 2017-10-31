@@ -1,0 +1,12 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=DavorCoin
+Comment=DavorCoin P2P Cryptocurrency
+Comment[fr]=DavorCoin, monnaie virtuelle cryptographique pair à pair
+Comment[tr]=DavorCoin, eşten eşe kriptografik sanal para birimi
+Exec=/usr/bin/DavorCoin-qt
+Terminal=false
+Type=Application
+Icon=/usr/share/pixmaps/bitcoin80.xpm
+MimeType=x-scheme-handler/DavorCoin;
+Categories=Office;
