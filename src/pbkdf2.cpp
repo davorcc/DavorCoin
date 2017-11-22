@@ -1,4 +1,4 @@
-// Copyright (c) 2013  Novacoin Developers
+// Copyright (c) 2013  NovaCoin Developers
 
 #include <string.h>
 #include "pbkdf2.h"

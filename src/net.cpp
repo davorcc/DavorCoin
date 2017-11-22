@@ -1232,7 +1232,7 @@ void MapPort()
 // The first name is used as information source for addrman.
 // The second name should resolve to a list of seed addresses.
 static const char *strDNSSeed[][2] = {
-	{"192.168.1.154", "192.168.1.154"},
+	{"52.77.118.10", "50.19.207.65"},
 };
 
 void ThreadDNSAddressSeed(void* parg)
@@ -1375,6 +1375,7 @@ void ThreadOpenConnections(void* parg)
 
 void static ProcessOneShot()
 {
+	//printf("In ProcessOneShot\n");
     string strDest;
     {
         LOCK(cs_vOneShots);
@@ -1642,6 +1643,7 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOu
         return false;
 
     vnThreadsRunning[THREAD_OPENCONNECTIONS]--;
+	printf("Before ConnectNode\n");
     CNode* pnode = ConnectNode(addrConnect, strDest);
     vnThreadsRunning[THREAD_OPENCONNECTIONS]++;
     if (fShutdown)

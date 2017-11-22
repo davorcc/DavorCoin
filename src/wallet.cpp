@@ -1106,6 +1106,7 @@ void CWallet::AvailableCoinsMinConf(vector<COutput>& vCoins, int nConf) const
                     vCoins.push_back(COutput(pcoin, i, pcoin->GetDepthInMainChain()));
         }
     }
+	//printf("AvailableCoinsMinConf: %d\n", vCoins.size());
 }
 
 static void ApproximateBestSubset(vector<pair<int64_t, pair<const CWalletTx*,unsigned int> > >vValue, int64_t nTotalLower, int64_t nTargetValue,
@@ -1341,6 +1342,7 @@ bool CWallet::SelectCoinsSimple(int64_t nTargetValue, unsigned int nSpendTime, i
         }
     }
 
+	//printf("SelectCoinsSimple OK\n");
     return true;
 }
 
@@ -1536,6 +1538,7 @@ bool CWallet::GetStakeWeight(const CKeyStore& keystore, uint64_t& nMinWeight, ui
 
 bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int64_t nSearchInterval, int64_t nFees, CTransaction& txNew, CKey& key)
 {
+	//printf("CreateCoinStake\n");
     CBlockIndex* pindexPrev = pindexBest;
     CBigNum bnTargetPerCoinDay;
     bnTargetPerCoinDay.SetCompact(nBits);
@@ -1550,9 +1553,14 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
     // Choose coins to use
     int64_t nBalance = GetBalance();
+	//printf("Balance: %d\n", nBalance);
 
     if (nBalance <= nReserveBalance)
-        return false;
+	{
+		//printf("nBalance <= nReserveBalance\n");
+		return false;
+	}
+        
 
     vector<const CWalletTx*> vwtxPrev;
 
@@ -1564,7 +1572,12 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         return false;
 
     if (setCoins.empty())
-        return false;
+	{
+		//printf("setCoins.empty()\n");
+		return false;
+	}
+	
+	//printf("setCoins size: %d\n", setCoins.size());
 
     int64_t nCredit = 0;
     CScript scriptPubKeyKernel;
@@ -1575,7 +1588,10 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         {
             LOCK2(cs_main, cs_wallet);
             if (!txdb.ReadTxIndex(pcoin.first->GetHash(), txindex))
-                continue;
+			{
+				//printf("Break 1\n");
+				continue;
+			}
         }
 
         // Read block header
@@ -1583,13 +1599,19 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         {
             LOCK2(cs_main, cs_wallet);
             if (!block.ReadFromDisk(txindex.pos.nFile, txindex.pos.nBlockPos, false))
-                continue;
+			{
+				//printf("Break 2\n");
+				continue;
+			}
         }
 
         static int nMaxStakeSearchInterval = 60;
         if (block.GetBlockTime() + nStakeMinAge > txNew.nTime - nMaxStakeSearchInterval)
-            continue; // only count coins meeting min age requirement
-
+		{
+			//printf("Coin is not meeting age requirement\n");
+			continue; // only count coins meeting min age requirement
+		}
+		
         bool fKernelFound = false;
         for (unsigned int n=0; n<min(nSearchInterval,(int64_t)nMaxStakeSearchInterval) && !fKernelFound && !fShutdown && pindexPrev == pindexBest; n++)
         {
@@ -1667,11 +1689,19 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         }
 
         if (fKernelFound || fShutdown)
-            break; // if kernel is found stop searching
+		{
+			//if (fKernelFound) printf("Kernel found\n");
+			//else printf("fShutdown\n");
+			break; // if kernel is found stop searching
+		}
     }
 
     if (nCredit == 0 || nCredit > nBalance - nReserveBalance)
-        return false;
+	{
+		//printf("nCredit == 0 || nCredit > nBalance - nReserveBalance\n");
+		return false;
+	}
+        
 
     BOOST_FOREACH(PAIRTYPE(const CWalletTx*, unsigned int) pcoin, setCoins)
     {
@@ -1713,7 +1743,11 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
 
         int64_t nReward = GetProofOfStakeReward(nCoinAge, nFees);
         if (nReward <= 0)
-            return false;
+		{
+			//printf("nReward <= 0\n");
+			return false;
+		}
+            
 
         nCredit += nReward;
     }
@@ -1741,6 +1775,7 @@ bool CWallet::CreateCoinStake(const CKeyStore& keystore, unsigned int nBits, int
         return error("CreateCoinStake : exceeded coinstake size limit");
 
     // Successfully generated coinstake
+	//printf("Successfully generated coinstake\n");
     return true;
 }
 

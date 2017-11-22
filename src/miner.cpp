@@ -109,6 +109,8 @@ public:
 // CreateNewBlock: create new block (without proof-of-work/proof-of-stake)
 CBlock* CreateNewBlock(CWallet* pwallet, bool fProofOfStake, int64_t* pFees)
 {
+	//printf("CreateNewBlock\n");
+	//printf("fProofOfStake: %d\n", fProofOfStake);
     // Create new block
     auto_ptr<CBlock> pblock(new CBlock());
     if (!pblock.get())
@@ -520,6 +522,7 @@ bool CheckStake(CBlock* pblock, CWallet& wallet)
 
 void StakeMiner(CWallet *pwallet)
 {
+	//printf("In StakeMiner()\n");
     SetThreadPriority(THREAD_PRIORITY_LOWEST);
 
     // Make this thread recognisable as the mining thread
@@ -530,10 +533,15 @@ void StakeMiner(CWallet *pwallet)
     while (true)
     {
         if (fShutdown)
-            return;
+		{
+			//printf("fShutdown\n");
+			return;
+		}
+            
 
         while (pwallet->IsLocked())
         {
+			//printf("Wallet is locked\n");
             nLastCoinStakeSearchInterval = 0;
             MilliSleep(1000);
             if (fShutdown)
@@ -542,6 +550,7 @@ void StakeMiner(CWallet *pwallet)
 
         while (vNodes.empty() || IsInitialBlockDownload())
         {
+			//printf("vNodes.empty() || IsInitialBlockDownload()\n");
             nLastCoinStakeSearchInterval = 0;
             fTryToSync = true;
             MilliSleep(1000);
@@ -551,6 +560,7 @@ void StakeMiner(CWallet *pwallet)
 
         if (fTryToSync)
         {
+			//printf("fTryToSync\n");
             fTryToSync = false;
             if (vNodes.size() < 3 || nBestHeight < GetNumBlocksOfPeers())
             {
@@ -562,20 +572,27 @@ void StakeMiner(CWallet *pwallet)
         //
         // Create new block
         //
+		//printf("Create new block\n");
         int64_t nFees;
         auto_ptr<CBlock> pblock(CreateNewBlock(pwallet, true, &nFees));
         if (!pblock.get())
             return;
 
         // Trying to sign a block
+		//printf("Trying to sign a block\n");
         if (pblock->SignBlock(*pwallet, nFees))
         {
+			//printf("Block signed\n");
             SetThreadPriority(THREAD_PRIORITY_NORMAL);
             CheckStake(pblock.get(), *pwallet);
             SetThreadPriority(THREAD_PRIORITY_LOWEST);
             MilliSleep(500);
         }
         else
-            MilliSleep(nMinerSleep);
+		{
+			//printf("Block failed to sign\n");
+			MilliSleep(nMinerSleep);
+		}
+            
     }
 }

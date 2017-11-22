@@ -34,9 +34,9 @@ QString BitcoinUnits::name(int unit)
 {
     switch(unit)
     {
-    case BTC: return QString("DavorCoin");
-    case mBTC: return QString("mDavorCoin");
-    case uBTC: return QString::fromUtf8("μDavorCoin");
+    case BTC: return QString("DAV");
+    case mBTC: return QString("mDAV");
+    case uBTC: return QString::fromUtf8("μDAV");
     default: return QString("???");
     }
 }

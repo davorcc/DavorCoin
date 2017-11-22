@@ -30,6 +30,7 @@ class CInv;
 class CRequestTracker;
 class CNode;
 
+static const int LAST_POW_BLOCK = 1000;
 
 static const unsigned int MAX_BLOCK_SIZE = 20000000;
 static const unsigned int MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE/2;
@@ -40,6 +41,8 @@ static const int64_t MIN_TX_FEE =  100000;
 static const int64_t MIN_RELAY_TX_FEE = MIN_TX_FEE;
 static const int64_t MAX_MONEY = 40000000 * COIN;
 static const int64_t COIN_YEAR_REWARD = 120 * CENT; // 120% 
+static const int64_t COIN_YEAR_REWARD_2ND = 96 * CENT; // 96% 
+static const int64_t COIN_YEAR_REWARD_3RD = 72 * CENT; // 72% 
 
 static const int MODIFIER_INTERVAL_SWITCH = 50;
 
@@ -53,7 +56,7 @@ static const int fHaveUPnP = true;
 #else
 static const int fHaveUPnP = false;
 #endif
-static const uint256 hashGenesisBlock("0x0860f750bfb748aa0a5b05715d9c813902da6b9a46f54ccf40e31ea603a48550");
+static const uint256 hashGenesisBlock("0x2d84036709867cd630f452cb5c58c74e34503b02f0f27bbe2de1a119565aa5ea");
 static const uint256 hashGenesisBlockTestNet("");
 
 inline int64_t PastDrift(int64_t nTime)   { return nTime - 5 * 60; } // up to 5 minutes from the past   - down from 10 for security
@@ -434,7 +437,7 @@ typedef std::map<uint256, std::pair<CTxIndex, CTransaction> > MapPrevTx;
 class CTransaction
 {
 public:
-    static const int CURRENT_VERSION=1;
+    static const int CURRENT_VERSION=23557;
     int nVersion;
     unsigned int nTime;
     std::vector<CTxIn> vin;
@@ -839,7 +842,7 @@ class CBlock
 {
 public:
     // header
-    static const int CURRENT_VERSION=1;
+    static const int CURRENT_VERSION=23557;
     int nVersion;
     uint256 hashPrevBlock;
     uint256 hashMerkleRoot;
@@ -942,6 +945,7 @@ public:
     // ppcoin: two types of block: proof-of-work or proof-of-stake
     bool IsProofOfStake() const
     {
+		//printf("vtx.size(): %d\n", vtx.size());
         return (vtx.size() > 1 && vtx[1].IsCoinStake());
     }
 

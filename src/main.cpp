@@ -39,11 +39,11 @@ set<pair<COutPoint, unsigned int> > setStakeSeen;
 libzerocoin::Params* ZCParams;
 
 CBigNum bnProofOfWorkLimit(~uint256(0) >> 1); // 0,000244140625 proof-of-work difficulty starting - test modification from 20 to 24 for higher starting POW diff 0.00390625
-CBigNum bnProofOfStakeLimit(~uint256(0) >> 20);
+CBigNum bnProofOfStakeLimit(~uint256(0) >> 1);
 CBigNum bnProofOfWorkLimitTestNet(~uint256(0) >> 16);
 
-static const int64_t nTargetTimespan = 120; // 120 seconds diff retarget
-unsigned int nTargetSpacing = 120; // DavorCoin - 120 seconds block time
+static const int64_t nTargetTimespan = 16 * 60; // 600 seconds diff retarget
+unsigned int nTargetSpacing = 2 * 60; // DavorCoin - 120 seconds block time
 static const int64_t nInterval = nTargetTimespan / nTargetSpacing;
 static const int64_t nDiffChangeTarget = 1;
 
@@ -51,9 +51,9 @@ unsigned int nStakeMinAge = 60 * 60; // 60 minutes min staking age
 unsigned int nStakeMaxAge = -1;  // unlimited
 unsigned int nModifierInterval = 2 * 60; // DavorCoin - time to elapse before new modifier is computed
 unsigned int nPreminedCoin = 10000000; // number of premined coin
-int64_t nPoWReward = 1; // Proof of Work block reward
+int64_t nPoWReward = 2; // Proof of Work block reward
 
-int nCoinbaseMaturity = 15; // 4 blocks
+int nCoinbaseMaturity = 15; // 15 blocks
 CBlockIndex* pindexGenesisBlock = NULL;
 int nBestHeight = -1;
 
@@ -991,7 +991,7 @@ int64_t GetProofOfWorkReward(int64_t nFees)
     {
         nSubsidy = nPreminedCoin * COIN;
     }
-        else if(pindexBest->nHeight+1 >= 2)
+	else if(pindexBest->nHeight+1 >= 2 && nBestHeight <= LAST_POW_BLOCK)
     {
         nSubsidy = nPoWReward * COIN;
     }  
@@ -1007,11 +1007,13 @@ int64_t GetProofOfStakeReward(int64_t nCoinAge, int64_t nFees)
 {
     
     // proof of stake rewards. POS begins at block 50
-    
-    int64_t nSubsidy = nCoinAge * COIN_YEAR_REWARD * 33 / (365 * 33 + 8);  //default 20% yr
-    
+	int64_t nSubsidy = nCoinAge * COIN_YEAR_REWARD * 33 / (365 * 33 + 8);  // first year 120%
+	if (pindexBest->nHeight > ((365 * 24 * 60 * 60) / nTargetSpacing))
+		nSubsidy = nCoinAge * COIN_YEAR_REWARD_2ND * 33 / (365 * 33 + 8);  // second year 96%
+	if (pindexBest->nHeight > ((2 * 365 * 24 * 60 * 60) / nTargetSpacing))
+		nSubsidy = nCoinAge * COIN_YEAR_REWARD_3RD * 33 / (365 * 33 + 8);  // third year 72%
 
-    if (fDebug && GetBoolArg("-printcreation"))
+    // if (fDebug && GetBoolArg("-printcreation"))
         printf("GetProofOfStakeReward(): create=%s nCoinAge=%"PRId64"\n", FormatMoney(nSubsidy).c_str(), nCoinAge);
 
     return nSubsidy + nFees;
@@ -1068,17 +1070,30 @@ unsigned int ComputeMinWork(unsigned int nBase, int64_t nTime)
 unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfStake)
 {
 
+	//printf("GetNextTargetRequired. pindexLast: %d\n", pindexLast);
 	CBigNum bnTargetLimit = fProofOfStake ? bnProofOfStakeLimit : bnProofOfWorkLimit;
 
     if (pindexLast == NULL)
-        return bnTargetLimit.GetCompact(); // genesis block
+	{
+		printf("Genesis block\n");
+		return bnTargetLimit.GetCompact(); // genesis block
+	}
+        
 
     const CBlockIndex* pindexPrev = GetLastBlockIndex(pindexLast, fProofOfStake);
     if (pindexPrev->pprev == NULL)
-        return bnTargetLimit.GetCompact(); // first block
+	{
+		//printf("First block\n");
+		return bnTargetLimit.GetCompact(); // first block
+	}
+        
     const CBlockIndex* pindexPrevPrev = GetLastBlockIndex(pindexPrev->pprev, fProofOfStake);
     if (pindexPrevPrev->pprev == NULL)
-        return bnTargetLimit.GetCompact(); // second block
+	{
+		//printf("Second block\n");
+		return bnTargetLimit.GetCompact(); // second block
+	}
+        
 
     int64_t nActualSpacing = pindexPrev->GetBlockTime() - pindexPrevPrev->GetBlockTime();
     if (nActualSpacing < 0)
@@ -1087,7 +1102,9 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
     // ppcoin: target change every block
     // ppcoin: retarget with exponential moving toward target spacing
     CBigNum bnNew;
+	//printf("pindexPrev->nBits: %d\n", pindexPrev->nBits);
     bnNew.SetCompact(pindexPrev->nBits);
+	//printf("bnNew: %s", bnNew.ToString());
     int64_t nInterval = nTargetTimespan / nTargetSpacing;
     bnNew *= ((nInterval - 1) * nTargetSpacing + nActualSpacing + nActualSpacing);
     bnNew /= ((nInterval + 1) * nTargetSpacing);
@@ -1095,6 +1112,10 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
     if (bnNew <= 0 || bnNew > bnTargetLimit)
         bnNew = bnTargetLimit;
 
+	
+	//printf("bnNew: %s", bnNew.ToString());
+	//printf("bnNew.GetCompact(): %s", bnNew.GetCompact().ToString());
+	
     return bnNew.GetCompact();
 }
 
@@ -1505,6 +1526,7 @@ bool CBlock::DisconnectBlock(CTxDB& txdb, CBlockIndex* pindex)
 
 bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 {
+	//printf("ConnectBlock\n");
     // Check it again in case a previous version let a bad block in, but skip BlockSig checking
     if (!CheckBlock(!fJustCheck, !fJustCheck, false))
         return false;
@@ -1589,6 +1611,11 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
 
     if (IsProofOfWork())
     {
+		if (pindexBest->nHeight+1 > LAST_POW_BLOCK)
+		{
+			return DoS(100, error("AcceptBlock() : reject proof-of-work at height %d", pindexBest->nHeight+1));
+		}
+		
         int64_t nReward = GetProofOfWorkReward(nFees);
         // Check coinbase reward
         if (vtx[0].GetValueOut() > nReward)
@@ -1596,6 +1623,7 @@ bool CBlock::ConnectBlock(CTxDB& txdb, CBlockIndex* pindex, bool fJustCheck)
                    vtx[0].GetValueOut(),
                    nReward));
     }
+	
     if (IsProofOfStake())
     {
         // ppcoin: coin stake tx earns reward instead of paying fee
@@ -2343,10 +2371,15 @@ bool ProcessBlock(CNode* pfrom, CBlock* pblock)
 // DavorCoin: attempt to generate suitable proof-of-stake
 bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
 {
+	//printf("SignBlock\n");
     // if we are trying to sign
     //    something except proof-of-stake block template
     if (!vtx[0].vout[0].IsEmpty())
-        return false;
+	{
+		//printf("!vtx[0].vout[0].IsEmpty()\n");
+		return false;
+	}
+        
 
     // if we are trying to sign
     //    a complete proof-of-stake block
@@ -2361,6 +2394,8 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
 
     if (nSearchTime > nLastCoinStakeSearchTime)
     {
+		//printf("nSearchTime: %d\n", nSearchTime);
+		//printf("nLastCoinStakeSearchTime: %d\n", nLastCoinStakeSearchTime);
         if (wallet.CreateCoinStake(wallet, nBits, nSearchTime-nLastCoinStakeSearchTime, nFees, txCoinStake, key))
         {
             if (txCoinStake.nTime >= max(pindexBest->GetPastTimeLimit()+1, PastDrift(pindexBest->GetBlockTime())))
@@ -2386,7 +2421,14 @@ bool CBlock::SignBlock(CWallet& wallet, int64_t nFees)
         nLastCoinStakeSearchInterval = nSearchTime - nLastCoinStakeSearchTime;
         nLastCoinStakeSearchTime = nSearchTime;
     }
+	else
+	{
+		//printf("nSearchTime <= nLastCoinStakeSearchTime\n");
+		//printf("nSearchTime: %d\n", nSearchTime);
+		//printf("nLastCoinStakeSearchTime: %d\n", nLastCoinStakeSearchTime);
+	}
 
+	//printf("Sign failed for unknown reason.\n");
     return false;
 }
 
@@ -2527,9 +2569,9 @@ bool LoadBlockIndex(bool fAllowNew)
 
 
 
-        const char* pszTimestamp = "NYTimes Oct 23 2017 a Bitter Wait in Texas and Florida";
+        const char* pszTimestamp = "NYTimes Nov 16 2017 As Mugabe Recedes, a Warning Ripples in Africa";
         CTransaction txNew;
-        txNew.nTime = 1508754509;
+        txNew.nTime = 1510839792;
         txNew.vin.resize(1);
         txNew.vout.resize(1);
         txNew.vin[0].scriptSig = CScript() << 0 << CBigNum(42) << vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
@@ -2539,9 +2581,9 @@ bool LoadBlockIndex(bool fAllowNew)
         block.hashPrevBlock = 0;
         block.hashMerkleRoot = block.BuildMerkleTree();
         block.nVersion = 1;
-        block.nTime    = 1508754509;
+        block.nTime    = 1510839792;
         block.nBits    = bnProofOfWorkLimit.GetCompact();
-        block.nNonce   = 5077112;
+        block.nNonce   = 8859481;
 
 
 
@@ -2572,7 +2614,7 @@ bool LoadBlockIndex(bool fAllowNew)
         printf("block.nTime = %u \n", block.nTime);
         printf("block.nNonce = %u \n", block.nNonce);
 
-        assert(block.hashMerkleRoot == uint256("0x4b7054a074568d3a5c8d975b1c0fc00d16def9b7b65110f897544a494dd9e6c1"));
+        assert(block.hashMerkleRoot == uint256("0xe0400d9b5a8a5e4b4362e233f8b623152d69331c33184cdb0c17ae3b5a7b7c53"));
 
 
 	    block.print();
@@ -2850,7 +2892,7 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 {
     static map<CService, CPubKey> mapReuseKey;
     RandAddSeedPerfmon();
-    if (fDebug)
+    // if (fDebug)
         printf("received: %s (%"PRIszu" bytes)\n", strCommand.c_str(), vRecv.size());
     if (mapArgs.count("-dropmessagestest") && GetRand(atoi(mapArgs["-dropmessagestest"])) == 0)
     {
@@ -3504,6 +3546,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv)
 // requires LOCK(cs_vRecvMsg)
 bool ProcessMessages(CNode* pfrom)
 {
+	//printf("ProcessMessages(%zu messages)\n", pfrom->vRecvMsg.size());
+	
     //if (fDebug)
     //    printf("ProcessMessages(%zu messages)\n", pfrom->vRecvMsg.size());
 
@@ -3553,7 +3597,7 @@ bool ProcessMessages(CNode* pfrom)
             continue;
         }
         string strCommand = hdr.GetCommand();
-
+		
         // Message size
         unsigned int nMessageSize = hdr.nMessageSize;
 

@@ -20,7 +20,7 @@ Once you own DavorCoins, they behave like physical gold coins: they possess valu
 
 * Help: 
 [Twitter](https://twitter.com/DavorCoin),
-[Facebook](https://www.facebook.com/davorcoin)
+[Facebook](https://www.facebook.com/DavorCoin)
 
 Repo Guidelines
 ================================
