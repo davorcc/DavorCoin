@@ -1643,7 +1643,7 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOu
         return false;
 
     vnThreadsRunning[THREAD_OPENCONNECTIONS]--;
-	printf("Before ConnectNode\n");
+	//printf("Before ConnectNode\n");
     CNode* pnode = ConnectNode(addrConnect, strDest);
     vnThreadsRunning[THREAD_OPENCONNECTIONS]++;
     if (fShutdown)
