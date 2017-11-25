@@ -49,7 +49,10 @@ static const int64_t nDiffChangeTarget = 1;
 
 unsigned int nStakeMinAge = 60 * 60; // 60 minutes min staking age
 unsigned int nStakeMaxAge = -1;  // unlimited
-unsigned int nModifierInterval = 10 * 60; // DavorCoin - time to elapse before new modifier is computed
+unsigned int nModifierIntervalNew = 10 * 60; // DavorCoin - time to elapse before new modifier is computed
+unsigned int nModifierIntervalOld = 2 * 60; // old value
+unsigned int nModifierInterval = nModifierIntervalNew;
+unsigned int nBlockHeightForNewModifierInterval = 3000; // the block height for applying the new modifier interval
 unsigned int nPreminedCoin = 10000000; // number of premined coin
 int64_t nPoWReward = 2; // Proof of Work block reward
 
@@ -2017,6 +2020,9 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos, const u
         return error("AddToBlockIndex() : ComputeNextStakeModifier() failed");
     pindexNew->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
     pindexNew->nStakeModifierChecksum = GetStakeModifierChecksum(pindexNew);
+	
+	//printf("AddToBlockIndex() : height=%d, modifier=0x%016"PRIx64, pindexNew->nHeight, nStakeModifier);
+	
     //if (!CheckStakeModifierCheckpoints(pindexNew->nHeight, pindexNew->nStakeModifierChecksum))
         //return error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, modifier=0x%016"PRIx64, pindexNew->nHeight, nStakeModifier);
 
@@ -2180,6 +2186,8 @@ bool CBlock::AcceptBlock()
         return DoS(100, error("AcceptBlock() : rejected by hardened checkpoint lock-in at %d", nHeight));
 
     uint256 hashProof;
+	if (nHeight < nBlockHeightForNewModifierInterval) nModifierInterval = nModifierIntervalOld; // old modifier interval for old blocks
+	else nModifierInterval = nModifierIntervalNew;
     // Verify hash target and signature of coinstake tx
     if (IsProofOfStake())
     {

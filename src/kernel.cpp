@@ -15,6 +15,7 @@ typedef std::map<int, unsigned int> MapModifierCheckpoints;
 static std::map<int, unsigned int> mapStakeModifierCheckpoints =
     boost::assign::map_list_of
     (     0, -49154841 )
+	(2922, 0xa103bbcf)
 
     ;
 
@@ -412,9 +413,14 @@ unsigned int GetStakeModifierChecksum(const CBlockIndex* pindex)
 // Check stake modifier hard checkpoints
 bool CheckStakeModifierCheckpoints(int nHeight, unsigned int nStakeModifierChecksum)
 {
+	printf("CheckStakeModifierCheckpoints(), nHeight: %d\n", nHeight);
     MapModifierCheckpoints& checkpoints = (fTestNet ? mapStakeModifierCheckpointsTestNet : mapStakeModifierCheckpoints);
 
     if (checkpoints.count(nHeight))
-        return nStakeModifierChecksum == checkpoints[nHeight];
+	{
+		printf("Checkpoint found. nStakeModifierChecksum: 0x%016"PRIx64, nStakeModifierChecksum);
+		return nStakeModifierChecksum == checkpoints[nHeight];
+	}
+        
     return true;
 }
