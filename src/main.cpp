@@ -49,7 +49,7 @@ static const int64_t nDiffChangeTarget = 1;
 
 unsigned int nStakeMinAge = 60 * 60; // 60 minutes min staking age
 unsigned int nStakeMaxAge = -1;  // unlimited
-unsigned int nModifierInterval = 2 * 60; // DavorCoin - time to elapse before new modifier is computed
+unsigned int nModifierInterval = 10 * 60; // DavorCoin - time to elapse before new modifier is computed
 unsigned int nPreminedCoin = 10000000; // number of premined coin
 int64_t nPoWReward = 2; // Proof of Work block reward
 
