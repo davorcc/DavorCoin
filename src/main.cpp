@@ -42,7 +42,10 @@ CBigNum bnProofOfWorkLimit(~uint256(0) >> 1); // 0,000244140625 proof-of-work di
 CBigNum bnProofOfStakeLimit(~uint256(0) >> 1);
 CBigNum bnProofOfWorkLimitTestNet(~uint256(0) >> 16);
 
-static const int64_t nTargetTimespan = 16 * 60; // 600 seconds diff retarget
+static const int64_t nTargetTimespan = 16 * 60; // diff retarget
+static const int64_t nTargetTimespanOld = 16 * 60; // diff retarget
+static const int64_t nTargetTimespanNew = 24 * 60 * 60; // diff retarget
+unsigned int nBlockHeightForNewTargetTimespan = 3610; // the block height for applying the new target timespan
 unsigned int nTargetSpacing = 2 * 60; // DavorCoin - 120 seconds block time
 static const int64_t nInterval = nTargetTimespan / nTargetSpacing;
 static const int64_t nDiffChangeTarget = 1;
@@ -1108,7 +1111,10 @@ unsigned int GetNextTargetRequired(const CBlockIndex* pindexLast, bool fProofOfS
 	//printf("pindexPrev->nBits: %d\n", pindexPrev->nBits);
     bnNew.SetCompact(pindexPrev->nBits);
 	//printf("bnNew: %s", bnNew.ToString());
-    int64_t nInterval = nTargetTimespan / nTargetSpacing;
+	int64_t nInterval = nTargetTimespanOld / nTargetSpacing;
+	if (pindexPrev->nHeight+1 >= nBlockHeightForNewTargetTimespan)
+		nInterval = nTargetTimespanNew / nTargetSpacing;
+	
     bnNew *= ((nInterval - 1) * nTargetSpacing + nActualSpacing + nActualSpacing);
     bnNew /= ((nInterval + 1) * nTargetSpacing);
 
